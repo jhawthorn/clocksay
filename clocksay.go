@@ -105,16 +105,22 @@ var font = map[byte]uint{
 }
 
 func setup(i2c *i2c.I2C) {
+	/* Enable oscillator  */
 	_, err := i2c.Write([]byte{0x21})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, err = i2c.Write([]byte{0xef})
+	/* Max brightness */
+	brightness := byte(15)
+
+	/* Set brightness (0-15) */
+	_, err = i2c.Write([]byte{0xe0 | brightness})
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	/* Display ON, blinking OFF */
 	_, err = i2c.Write([]byte{0x81})
 	if err != nil {
 		log.Fatal(err)
@@ -124,6 +130,8 @@ func setup(i2c *i2c.I2C) {
 func writeString(i2c *i2c.I2C, s string) {
 
 	payload := make([]byte, 17)
+
+	/* Address 0x00 */
 	payload[0] = 0
 
 	for i := 0; i < 8; i++ {
@@ -134,8 +142,9 @@ func writeString(i2c *i2c.I2C, s string) {
 			char = s[i]
 		}
 		bitmap := font[char];
-		payload[i*2+1] = byte(bitmap & 0xff)
-		payload[i*2+2] = byte((bitmap >> 8) & 0xff)
+
+		payload[i*2+1] = byte(bitmap & 0xff)        /* LSB */
+		payload[i*2+2] = byte((bitmap >> 8) & 0xff) /* MSB */
 	}
 
 	_, err := i2c.Write(payload)
@@ -146,6 +155,8 @@ func writeString(i2c *i2c.I2C, s string) {
 }
 
 func main() {
+	/* RaspberryPi's I2C defaults to bus 1 */
+	/* HT16K33 defaults to address 0x70 */
 	i2c, err := i2c.NewI2C(0x70, 1)
 	if err != nil {
 		log.Fatal(err)
